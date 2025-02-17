@@ -1,15 +1,14 @@
 pipeline {
-    agent none // Don't use any global agent
+    agent none
     stages {
         stage('Build') {
             agent {
                 docker {
-                    image 'python:3.9'
+                    image 'python:2-alpine'
                 }
             }
             steps {
                 sh 'python -m py_compile sources/add2vals.py sources/calc.py'
-                stash(name: 'compiled-results', includes: 'sources/*.py*')
             }
         }
         stage('Test') {
@@ -27,23 +26,14 @@ pipeline {
                 }
             }
         }
-        stage('Approval') {
-            steps {
-                input message: 'Lanjutkan ke tahap Deploy? (Klik "Proceed" untuk melanjutkan ke tahap Deploy)'
-            }
-        }
-        stage('Deploy') {
+        stage('Deliver') {
             agent {
                 docker {
-                    image 'python:3.9'
-                    args '-u root'
+                    image 'cdrx/pyinstaller-linux:python2'
                 }
             }
             steps {
-                sh 'pip install pyinstaller'
                 sh 'pyinstaller --onefile sources/add2vals.py'
-                sleep time: 1, unit: 'MINUTES'
-                echo 'Pipeline has finished successfully.'
             }
             post {
                 success {
