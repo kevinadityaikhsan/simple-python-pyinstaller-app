@@ -1,7 +1,8 @@
 pipeline {
     agent {
         docker { 
-            image 'python:3.12-alpine'  // Using a stable Python version
+            image 'python:3.12-alpine'
+            args '--network jenkins'
         }
     }
     stages {
