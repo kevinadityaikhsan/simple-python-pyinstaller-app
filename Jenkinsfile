@@ -36,7 +36,6 @@ pipeline {
                     sh "scp -o StrictHostKeyChecking=no dist/add2vals ${env.EC2_USER}@${env.EC2_HOST}:/tmp/"
                     sh "ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} 'nohup /tmp/add2vals > /dev/null 2>&1 & echo \$! > /tmp/add2vals.pid'"
                     sleep 60
-                    sh "ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} 'kill \$(cat /tmp/add2vals.pid)'"
                 }
                 archiveArtifacts artifacts: 'dist/add2vals', fingerprint: true
             }
