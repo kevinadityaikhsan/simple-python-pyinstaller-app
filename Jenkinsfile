@@ -33,7 +33,7 @@ pipeline {
                 unstash 'artifact'
                 
                 sshagent([ 'EC2_SSH_KEY' ]) {
-                    sh "scp -o StrictHostKeyChecking=no dist/add2vals ${env.EC2_USER}@${env.EC2_HOST}:/"
+                    sh "scp -o StrictHostKeyChecking=no dist/add2vals ${env.EC2_USER}@${env.EC2_HOST}:~"
                     sleep 60
                 }
                 archiveArtifacts artifacts: 'dist/add2vals', fingerprint: true
