@@ -1,21 +1,45 @@
-node {
-    stage('Checkout SCM') {
-        // Check out the source code from the SCM defined in the job configuration
-        checkout scm
+pipeline {
+    agent any
+    environment {
+        EC2_USER = 'ec2-user'
+        EC2_HOST = 'ec2-54-179-219-58.ap-southeast-1.compute.amazonaws.com'
     }
-    stage('Build') {
-        // Compile the Python sources
-        sh 'python3 -m py_compile sources/add2vals.py sources/calc.py'
-        stash name: 'compiled-results', includes: 'sources/*.py*'
-    }
-    stage('Test') {
-        // Run tests and generate JUnit report
-        sh 'py.test --junit-xml test-reports/results.xml sources/test_calc.py'
-        junit 'test-reports/results.xml'
-    }
-    stage('Deliver') {
-        // Build the executable using PyInstaller
-        sh 'pyinstaller --onefile sources/add2vals.py'
-        archiveArtifacts artifacts: 'dist/add2vals', fingerprint: true
+    stages {
+        stage('Checkout SCM') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'python3 -m py_compile sources/add2vals.py sources/calc.py'
+                sh 'pyinstaller --onefile sources/add2vals.py'
+                stash name: 'artifact', includes: 'dist/add2vals'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'py.test --junit-xml test-reports/results.xml sources/test_calc.py'
+                junit 'test-reports/results.xml'
+            }
+        }
+        stage('Manual Approval') {
+            steps {
+                input message: 'Lanjutkan ke tahap Deploy?', ok: 'Proceed'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                unstash 'artifact'
+                
+                sshagent([ 'EC2_SSH_KEY' ]) {
+                    sh "scp -o StrictHostKeyChecking=no dist/add2vals ${env.EC2_USER}@${env.EC2_HOST}:/tmp/"
+                    sh "ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} 'nohup /tmp/add2vals > /dev/null 2>&1 & echo \$! > /tmp/add2vals.pid'"
+                    sleep 60
+                    sh "ssh -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} 'kill \$(cat /tmp/add2vals.pid)'"
+                }
+                archiveArtifacts artifacts: 'dist/add2vals', fingerprint: true
+            }
+        }
     }
 }
